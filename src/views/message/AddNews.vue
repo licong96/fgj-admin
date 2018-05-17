@@ -13,7 +13,15 @@
       <el-form-item label="发布用户">
       </el-form-item>
       <el-form-item label="封面图" prop="PagePic">
-        <el-input v-model="addNews.PagePic" placeholder="请上传封面图"></el-input>
+        <div class="prev-img">
+          <i class="el-icon-plus"></i>
+          <img class="img" v-show="addNews.PagePic" :src="addNews.PagePic" alt="">
+          <label class="btn" for="uploads"></label>
+          <input type="file" id="uploads" 
+          style="position:absolute; clip:rect(0 0 0 0);" 
+          accept="image/png, image/jpeg, image/gif, image/jpg" 
+          @change="uploadImg($event, 1)">
+        </div>
       </el-form-item>
       <el-form-item label="长标题" prop="LongTitle">
         <el-input v-model="addNews.LongTitle" placeholder="请输入长标题"></el-input>
@@ -22,11 +30,11 @@
         <el-input v-model="addNews.ShortTitle" placeholder="请输入短标题"></el-input>
       </el-form-item>
       <el-form-item label="内容摘要" prop="ShortContent">
-        <el-input type="textarea" rows="3" v-model="addNews.ShortContent" placeholder="请输入内容摘要"></el-input>
+        <el-input type="textarea" rows="4" v-model="addNews.ShortContent" placeholder="请输入内容摘要"></el-input>
       </el-form-item>
       <el-form-item label="主体内容" prop="Content">
-        <!-- <el-input type="textarea" rows="8" v-model="addNews.Content" placeholder="请输入主体内容"></el-input> -->
-        <div id="editor"></div>
+        <div id="editorBar" class="editor-toolbar"></div>
+        <div id="editorText" class="editor-text"></div>
         <el-button type="primary" @click="onPreview">预览主体内容</el-button>
       </el-form-item>
       <el-form-item label="新闻时间" prop="NewsDate">
@@ -58,6 +66,31 @@
       </el-form-item>
     </el-form>
 
+    <!-- 封面图裁切 -->
+    <el-dialog
+      title=""
+      :visible.sync="dialogImg"
+      width="900px">
+      <div class="crop-wrap">
+        <vueCropper
+          ref="cropper"
+          :img="option.img"
+          :outputSize="option.size"
+          :outputType="option.outputType"
+          :info="true"
+          :canScale="option.canScale"
+          :autoCrop="option.autoCrop"
+          :autoCropWidth="option.autoCropWidth"
+          :autoCropHeight="option.autoCropHeight"
+          :fixed="option.fixed"
+          :fixedNumber="option.fixedNumber"
+          ></vueCropper>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="clearCrop">取消</el-button>
+        <el-button type="primary" @click="finish">裁切</el-button>
+      </span>
+    </el-dialog>
     <!-- 预览富文本编辑器的内容 -->
     <el-dialog
       title="预览主体内容，最终呈现的效果"
@@ -66,15 +99,17 @@
       <div v-html="previewHtml"></div>
       <span slot="footer" class="dialog-footer">
         <el-button type="primary" @click="dialogVisible = false">关 闭</el-button>
-        <!-- <el-button type="primary" @click="dialogVisible = false">确 定</el-button> -->
       </span>
     </el-dialog>
   </div>
 </template>
 
 <script>
+  import VueCropper from 'vue-cropper'
   import wangeditor from 'wangeditor'
+  import { FileUpLoad } from '@/api/message/public'
   import { classifyGetListMore, AddNews, UpNews, GetModel } from '@/api/message/addNews'
+  import host from '@/assets/js/config'
 
   let emptyObj = {
     NewsClassID: '',
@@ -105,6 +140,20 @@
         wangeditor: null,   // 富文本编辑器
         previewHtml: '',  // 预览富文本编辑器的内容
         dialogVisible: false,
+        dialogImg: false,
+        option: {
+          img: '',
+          size: 1,
+          outputType: 'jpg',
+				  canScale: false,
+          autoCrop: true,
+          // 只有自动截图开启 宽度高度才生效
+          autoCropWidth: 300,
+          autoCropHeight: 250,
+          // 开启宽度和高度比例
+          fixed: true,
+          fixedNumber: [4, 3]
+        },
         rules: {
           NewsClassID: [
             {required: true, message: '请选择分类', trigger: 'change'}
@@ -164,20 +213,94 @@
       this.createEditor()   // 创建富文本编辑器
     },
     methods: {
+      startCrop () {
+        // start
+        this.crap = true
+        this.$refs.cropper.startCrop()
+      },
+      clearCrop () {
+        this.dialogImg = false
+        this.$refs.cropper.clearCrop()
+      },
+      isPreviews() {
+        if (this.option.img) {
+          this.dialogImg = true
+        }
+      },
+      // 输出
+      finish (type) {
+        let _this = this
+
+        this.dialogImg = false
+        this.$refs.cropper.getCropBlob((data) => {
+          let forms = new FormData()
+          forms.append('filename', data)
+          // 上传图片
+          FileUpLoad(forms).then(res => {
+            // console.log(res)
+            if (res.data.result === 'success') {
+              _this.addNews.PagePic = host + res.data.path.split('|').join('')
+            }
+          })
+        })
+      },
+      //上传图片
+      uploadImg (e, num) {
+        let _this = this
+        // this.option.img
+        var file = e.target.files[0]
+        if (!/\.(gif|jpg|jpeg|png|bmp|GIF|JPG|PNG)$/.test(e.target.value)) {
+          this.$notify.error({
+            title: '图片格式错误',
+            message: '图片类型必须是.gif,jpeg,jpg,png,bmp中的一种'
+          });
+          return false
+        }
+        var reader = new FileReader()
+        reader.onload = (e) => {
+          _this.dialogImg = true
+          let data = null
+          if (typeof e.target.result === 'object') {
+            // 把Array Buffer转化为blob 如果是base64不需要
+            data = window.URL.createObjectURL(new Blob([e.target.result]))
+          } else {
+            data = e.target.result
+          }
+          if (num === 1) {
+            this.option.img = data
+          } else if (num === 2) {
+            this.example2.img = data
+          }
+        }
+        // 转化为base64
+        // reader.readAsDataURL(file)
+        // 转化为blob
+        reader.readAsArrayBuffer(file)
+      },
       // 创建富文本编辑器
       createEditor() {
-        let editor = this.wangeditor = new wangeditor('#editor')
-        editor.customConfig.debug = true
-        editor.customConfig.uploadImgServer = '/upload'  // 上传图片到服务器
-        editor.customConfig.linkImgCallback = function (url) {
-          console.log(url) // url 即插入图片的地址
+        let editor = this.wangeditor = new wangeditor('#editorBar', '#editorText')
+        // editor.customConfig.debug = true
+        editor.customConfig.uploadImgServer = '/Handler/FileUpLoad.ashx'  // 上传图片到服务器
+        editor.customConfig.uploadImgHooks = {
+          before: function (xhr, editor, files) {
+          },
+          error: function (xhr, editor) {
+            _this.$message.error('图片上传失败')
+          },
+          customInsert: function (insertImg, result, editor) {
+            // insertImg 是插入图片的函数，editor 是编辑器对象，result 是服务器端返回的结果
+            let url = result.path.split('|').join('')   // 去掉 |
+            
+            insertImg(host + url)
+          }
         }
+
         editor.create()
-        // editor.txt.html('<p>用 JS 设置的内容</p>')
+        // editor.txt.html(html)
       },
       // 预览主体内容
       onPreview() {
-        console.log(this.wangeditor.txt.html())
         this.previewHtml = this.wangeditor.txt.html()
         this.dialogVisible = true
       },
@@ -192,8 +315,10 @@
           }
         })
       },
+      // 提交
       onSubmit(formName) {
         let _this = this
+        this.addNews.Content = this.wangeditor.txt.html()
         this.$refs[formName].validate((valid) => {
           if (valid) {
             _this._addNews()
@@ -235,6 +360,9 @@
       UpNews() {
         
       }
+    },
+    components: {
+      VueCropper
     }
   }
 </script>
@@ -254,6 +382,50 @@
     .form-con {
       position: relative;
       z-index: 2;
+    }
+  }
+  .editor-toolbar {
+    border-radius: 4px 4px 0 0;
+    border: 1px solid #dcdfe6;
+    border-bottom: 0;
+  }
+  .editor-text {
+    border-radius: 0 0 4px 4px;
+    border: 1px solid #dcdfe6;
+    height: 500px;
+  }
+  .crop-wrap {
+    width: 100%;
+    height: 500px;
+  }
+  .prev-img {
+    position: relative;
+    width: 300px;
+    height: 225px;
+    border: 1px dashed #d9d9d9;
+    .img {
+      position: relative;
+      z-index: 2;
+    }
+    .el-icon-plus {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      z-index: 1;
+      transform: translate(-50%, -50%);
+      font-size: 44px;
+      color: #d9d9d9;
+    }
+    .btn {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 3;
+      cursor: pointer;
     }
   }
 </style>

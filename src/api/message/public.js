@@ -19,3 +19,15 @@ export function GetListMore(param) {
     params
   })
 }
+/**
+ * 上传图片
+ * @export FileUpLoad
+ * @param {any} formData 
+ */
+export function FileUpLoad(params) {
+  return fetch({
+    url:'/Handler/FileUpLoad.ashx',
+    method: 'post',
+    params
+  })
+}

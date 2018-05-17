@@ -18,23 +18,16 @@ export default function fetch(obj) {
         })
         break
       case 'post':
+        console.log('formData', params)
         axios({
           method: 'post',
           url: url,
           data: params,
-          transformRequest: [function (data) {
-            let ret = ''
-            for (let it in data) {
-              ret += encodeURIComponent(it) + '=' + encodeURIComponent(data[it]) + '&'
-            }
-            return ret
-          }],
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'   // 头信息改成from-data
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'   // 头信息改成from-data
           }
         })
         .then(function (response) {
-          console.log(response)
           resolve(response)
         })
         .catch(function (error) {
