@@ -50,7 +50,7 @@ export function GetModel(param) {
 
   return fetch({
     url:'/Handler/Handler.ashx',
-    method: 'post',
+    method: 'get',
     params
   })
 }

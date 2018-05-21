@@ -70,7 +70,7 @@
     <el-dialog
       title=""
       :visible.sync="dialogImg"
-      width="900px">
+      width="1200px">
       <div class="crop-wrap">
         <vueCropper
           ref="cropper"
@@ -145,11 +145,11 @@
           img: '',
           size: 1,
           outputType: 'jpg',
-				  canScale: false,
+				  canScale: true,
           autoCrop: true,
           // 只有自动截图开启 宽度高度才生效
-          autoCropWidth: 300,
-          autoCropHeight: 250,
+          autoCropWidth: 1000,
+          autoCropHeight: 769,
           // 开启宽度和高度比例
           fixed: true,
           fixedNumber: [4, 3]
@@ -318,10 +318,15 @@
       // 提交
       onSubmit(formName) {
         let _this = this
-        this.addNews.Content = this.wangeditor.txt.html()
+        this.addNews.Content = escape(this.wangeditor.txt.html())   // escape转码
         this.$refs[formName].validate((valid) => {
           if (valid) {
-            _this._addNews()
+            // 判断是新增还是修改
+            if (_this.NewsID) {
+              _this._UpNews()    // 修改资讯
+            } else {
+              _this._addNews()    // 添加资讯
+            }
           } else {
             console.log('error submit!!')
             return false;
@@ -330,8 +335,7 @@
       },
       // 添加资讯
       _addNews() {
-        var param = this.addNews
-        AddNews(param)
+        AddNews(this.addNews)
           .then(res => {
             if (res.data.result === 'success') {
               this.$message.success('添加成功！')
@@ -346,19 +350,44 @@
       },
       // 根据ID获取资讯信息
       GetModel() {
+        let NewsID = this.NewsID
         GetModel({
-          NewsID: this.NewsID
+          NewsID: NewsID
         })
         .then(res => {
-          console.log(res)
+          // console.log(res)
           if (res.data.result === 'success') {
-            
+            let data = res.data.data
+            this.addNews = {
+              NewsID: NewsID,
+              NewsClassID: data._newsclassid,
+              PagePic: data._pagepic,
+              LongTitle: data._longtitle,
+              ShortTitle: data._shorttitle,
+              ShortContent: data._shortcontent,
+              Content: data._content,
+              NewsDate: data._newsdate,
+              Editor: data._editor,
+              Source: data._source,
+              IsTop: String(data._istop)
+            }
+            this.wangeditor.txt.html(this.addNews.ShortContent)
           }
         })
       },
       // 修改资讯
-      UpNews() {
-        
+      _UpNews() {
+        UpNews(this.addNews)
+          .then(res => {
+            if (res.data.result === 'success') {
+              this.$message.success('修改成功！')
+            } else {
+              this.$message.error('修改失败！')
+            }
+          })
+          .catch(err => {
+            alert(err)
+          })
       }
     },
     components: {
@@ -396,7 +425,7 @@
   }
   .crop-wrap {
     width: 100%;
-    height: 500px;
+    height: 720px;
   }
   .prev-img {
     position: relative;

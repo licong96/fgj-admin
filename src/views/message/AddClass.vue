@@ -18,7 +18,7 @@
         <el-input v-model="addClass.ClassIndex" placeholder="请输入类型序号"></el-input>
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" @click="onSubmit('addClass')">{{btnText}}</el-button>
+        <el-button type="primary" class="submit" @click="onSubmit('addClass')">{{btnText}}</el-button>
       </el-form-item>
     </el-form>
   </div>
@@ -144,7 +144,7 @@
           for (let i = 0; i < data.length; i++) {
             if (data[i]._newsclassid === NewsClassID) {
               this.NewsClassData = data[i]
-              console.log(this.NewsClassData)
+              // console.log(this.NewsClassData)
               this.addData()
               return
             }
@@ -170,6 +170,10 @@
     max-width: 600px;
     .top-title {
       text-align: center;
+    }
+    .submit {
+      margin-top: 20px;
+      font-size: 18px;
     }
   }
 </style>
