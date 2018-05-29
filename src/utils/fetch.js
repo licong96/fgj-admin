@@ -17,7 +17,6 @@ export default function fetch(obj) {
       })
     } 
     else if (method === 'post' && !Object.keys(params).length) {      // 这是fromData，用来上传图片的接口
-      console.log('fromData')
       axios({
         method: 'post',
         url: url,
@@ -34,8 +33,6 @@ export default function fetch(obj) {
       })
     } 
     else if (method === 'post') {
-      console.log('post')
-      // axios.post(url, params)
       axios({
         method: 'post',
         url: url,
